@@ -35,24 +35,30 @@ obs |> Seq.length
 //|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
 //|> Chart.Show
 //
+
+//Wrong Way!
 //obs 
 //|> Seq.map(fun r -> (r.Lat * -1.0), r.Lon)
 //|> Chart.Line
 //|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
 //|> Chart.Show
 //
+
 obs 
 |> Seq.map(fun r -> (r.Lat * -1.0), r.Lon)
 |> Chart.Point
 |> Chart.WithYAxis(Min= -78.676, Max= -78.675)
 |> Chart.Show
 
+//Lap Number
 type Observation2 = {Id:int;ReadingTime:DateTime;Lat:float;Lon:float;Elev:float;Speed:float; LapNumber:int}
 
+//Need Start Line - use lat
+//Note inverse of Lat
 let obs2 = List<Observation2>()
 let mutable lapNumber = 0
 for ob in obs do
-    obs2.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber})
+    obs2.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat * -1.0 ;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber})
     if  (ob.Lon < -78.6758 && ob.Lat < 35.7007 && ob.Lat > 35.7005) then
         lapNumber <- lapNumber + 1
 obs2 |> Seq.length
@@ -63,11 +69,13 @@ obs2
 |> Seq.iter(fun (ln,lgth) -> printfn "%i:%i" ln lgth)
 
 
+//Need Start Line - use lat diff
+//Note inverse of Lat
 let obs3 = List<Observation2>()
 let mutable lapNumber2 = 0
 let mutable priorLat = obs |> Seq.head |> fun o -> o.Lat
 for ob in obs do
-    obs3.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber2})
+    obs3.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat * -1.0;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber2})
     if  (priorLat < 35.7005 && ob.Lat > 35.7005) then
         lapNumber2 <- lapNumber2 + 1
     priorLat <- ob.Lat
@@ -79,6 +87,7 @@ obs3
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.length)
 |> Seq.iter(fun (ln,lgth) -> printfn "%i:%i" ln lgth)
 
+//Get rid of lap 0 and last lap (when in pits)
 let racingObs =
     obs3
     |> Seq.filter(fun o -> o.LapNumber > 0 && o.LapNumber < 12)
@@ -86,11 +95,11 @@ let racingObs =
 racingObs |> Seq.length
 
 racingObs
-|> Seq.groupBy(fun o -> o.LapNumber)
-|> Seq.map(fun (ln,obs) -> ln,obs |> Seq.length)
-|> Seq.iter(fun (ln,lgth) -> printfn "%i:%i" ln lgth)
+|> Seq.countBy(fun o -> o.LapNumber)
+|> Seq.iter(fun (lp,lgth) -> printfn "%i:%i" lp lgth)
 
-//Average Speed
+
+//Average Speed according to GPS
 racingObs
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun ob -> ob.Speed))
@@ -103,19 +112,28 @@ let totalTimeForObservations (obs:Observation2 seq) =
     let lastValue = obs |> Seq.last |> fun o -> o.ReadingTime
     (lastValue - firstValue).TotalSeconds
     
+//Calc Spped?
+//Dang, counter is every whole second
 racingObs
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln, totalTimeForObservations obs)
 |> Seq.iter(fun (ln,s) -> printfn "%i:%f" ln s)
 
 //Fastest Lap
+//Using GPS Speed
 racingObs
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun ob -> ob.Speed))
 |> Seq.sortByDescending(fun (ln,s) -> s)
 |> Seq.iter(fun (ln,s) -> printfn "%i:%f" ln s)
 
-//
+//Track Location
+//1 = Turn 1
+//2 = Turn 2
+//3 = Back Straight
+//4 = Turn 3
+//5 = Turn 4
+//6 = Front Straight
 type Observation3 = {Id:int;Lat:float;Lon:float;Elev:float;
                     Speed:float; LapNumber:int; TrackLocation:int}
 
@@ -146,12 +164,14 @@ for ob in obs do
 
 obs4 |> Seq.length
 
+//Speed Per Lap
 obs4
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun o -> o.Speed))
 |> Chart.Bar
 |> Chart.Show
 
+//Speed Per Racing Lap
 obs4
 |> Seq.filter(fun o -> o.LapNumber > 1 && o.LapNumber < 11)
 |> Seq.groupBy(fun o -> o.LapNumber)
@@ -160,20 +180,23 @@ obs4
 |> Chart.WithYAxis(Min= 15.0, Max= 25.0)
 |> Chart.Show
 
+//Shrink Scale to see varaince
 obs4
 |> Seq.filter(fun o -> o.LapNumber > 1 && o.LapNumber < 11)
-|> Seq.groupBy(fun o -> o.TrackLocation)
+|> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun o -> o.Speed))
 |> Chart.Bar
 |> Chart.WithYAxis(Min= 20.0, Max= 25.0)
 |> Chart.Show
 
-racingObs
+//Lap Speed, Sorted
+obs4
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun ob -> ob.Speed))
 |> Seq.sortBy(fun (ln,s) -> s)
 |> Seq.iter(fun (ln,s) -> printfn "%i:%f" ln s)
 
+//Speed per Section
 let getTrackLocationSpeed lapNumber =
     obs4
     |> Seq.filter(fun o -> o.LapNumber = lapNumber)
@@ -181,6 +204,7 @@ let getTrackLocationSpeed lapNumber =
     |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun o -> o.Speed))
     |> Seq.sortBy(fun (ts,sp) -> ts) 
 
+//Slowest v Fastest by Location
 Seq.zip (getTrackLocationSpeed 3) (getTrackLocationSpeed 5)
 |> Seq.map(fun (t,f) -> fst t, snd t, snd f)
 |> Seq.map(fun (ts,t,f) -> ts,f-t)
@@ -200,8 +224,8 @@ let fast =
     |> Seq.map(fun (tl, obs) -> tl,obs |> Seq.averageBy(fun o -> snd o))
 
 Seq.zip slow fast
-|> Seq.map(fun (t,f) -> fst t, snd t, snd f)
-|> Seq.map(fun (ts,t,f) -> ts,f-t)
+|> Seq.map(fun (slow,fast) -> fst slow, snd slow, snd fast)
+|> Seq.map(fun (ts,slow,fast) -> ts,fast-slow)
 |> Chart.Bar
 |> Chart.Show
 
