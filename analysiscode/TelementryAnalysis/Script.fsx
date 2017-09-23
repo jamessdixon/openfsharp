@@ -54,11 +54,10 @@ obs
 type Observation2 = {Id:int;ReadingTime:DateTime;Lat:float;Lon:float;Elev:float;Speed:float; LapNumber:int}
 
 //Need Start Line - use lat
-//Note inverse of Lat
 let obs2 = List<Observation2>()
 let mutable lapNumber = 0
 for ob in obs do
-    obs2.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat * -1.0 ;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber})
+    obs2.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber})
     if  (ob.Lon < -78.6758 && ob.Lat < 35.7007 && ob.Lat > 35.7005) then
         lapNumber <- lapNumber + 1
 obs2 |> Seq.length
@@ -75,7 +74,7 @@ let obs3 = List<Observation2>()
 let mutable lapNumber2 = 0
 let mutable priorLat = obs |> Seq.head |> fun o -> o.Lat
 for ob in obs do
-    obs3.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat * -1.0;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber2})
+    obs3.Add({Id=ob.Id;ReadingTime=ob.ReadingTime;Lat=ob.Lat;Lon=ob.Lon;Elev=ob.Elev;Speed=ob.Speed;LapNumber=lapNumber2})
     if  (priorLat < 35.7005 && ob.Lat > 35.7005) then
         lapNumber2 <- lapNumber2 + 1
     priorLat <- ob.Lat
@@ -147,15 +146,15 @@ for ob in obs do
                 Speed=ob.Speed;LapNumber=lapNumber3; TrackLocation=trackLocation})
     if  (priorLat2 < 35.7005 && ob.Lat > 35.7005) then
         lapNumber3 <- lapNumber3 + 1
-    if (priorLat2 < 35.7003 && ob.Lat > 35.7003) then
+    if (priorLat2 < 35.7001 && ob.Lat > 35.7001) then
         trackLocation <- 1
-    if (priorLon < -78.6756 && ob.Lon > -78.6756) then
+    if (priorLon < -78.6755 && ob.Lon > -78.6755) then
         trackLocation <- 2
-    if (priorLat2 > 35.7003 && ob.Lat < 35.7003) then
+    if (priorLat2 > 35.7001 && ob.Lat < 35.7001) then
         trackLocation <- 3
     if (priorLat2 > 35.7007 && ob.Lat < 35.7007) then
         trackLocation <- 4
-    if (priorLon > -78.6756 && ob.Lon < -78.6756) then
+    if (priorLon > -78.6755 && ob.Lon < -78.6755) then
         trackLocation <- 5
     if (priorLat2 < 35.7007 && ob.Lat > 35.7007) then
         trackLocation <- 6
@@ -191,6 +190,7 @@ obs4
 
 //Lap Speed, Sorted
 obs4
+|> Seq.filter(fun o -> o.LapNumber > 1 && o.LapNumber < 11)
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun ob -> ob.Speed))
 |> Seq.sortBy(fun (ln,s) -> s)
@@ -212,13 +212,13 @@ Seq.zip (getTrackLocationSpeed 3) (getTrackLocationSpeed 5)
 |> Chart.Show
 
 let slow = 
-    [3;4;8] 
+    [2;3;4;8;9] 
     |> Seq.collect(fun ln -> getTrackLocationSpeed ln)
     |> Seq.groupBy(fun x -> fst x)
     |> Seq.map(fun (tl, obs) -> tl,obs |> Seq.averageBy(fun o -> snd o))
 
 let fast =
-    [5;7;10]
+    [5;7]
     |> Seq.collect(fun ln -> getTrackLocationSpeed ln)
     |> Seq.groupBy(fun x -> fst x)
     |> Seq.map(fun (tl, obs) -> tl,obs |> Seq.averageBy(fun o -> snd o))
@@ -267,8 +267,8 @@ map.Center <- new Location(35.7004574, -78.6760326)
 let createPin lap lat lon =
     let brush =
         match lap with
-        | 3 | 4 | 8 -> new SolidColorBrush(Colors.Red)
-        | 5 | 7 | 10 -> new SolidColorBrush(Colors.Green)
+        | 2 | 3 | 4 | 8 | 9 -> new SolidColorBrush(Colors.Red)
+        | 5 | 7 -> new SolidColorBrush(Colors.Green)
         | _ -> new SolidColorBrush(Colors.Black)
      
     let pin = new Pushpin()
