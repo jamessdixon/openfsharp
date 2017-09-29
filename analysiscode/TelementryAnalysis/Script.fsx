@@ -21,28 +21,24 @@ rows |> Seq.head
 type observation = {Id:int;ReadingTime:DateTime;Lat:float;Lon:float;Elev:float;Speed:float}
 let obs = 
     rows 
-    |> Seq.mapi(fun idx r -> {Id=idx;
-                                ReadingTime=r.DateTime;
-                                Lat=float r.Lat;
-                                Lon=float r.Lon;
-                                Elev=float r.Elev;
-                                Speed=float r.Speed})
+    |> Seq.mapi(fun idx r -> {Id=idx;ReadingTime=r.DateTime;
+                              Lat=float r.Lat;Lon=float r.Lon;
+                              Elev=float r.Elev;
+                              Speed=float r.Speed})
 obs |> Seq.length
 
-//obs 
-//|> Seq.map(fun r -> r.Lat, r.Lon)
-//|> Chart.Line
-//|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
-//|> Chart.Show
-//
+obs 
+|> Seq.map(fun r -> r.Lat, r.Lon)
+|> Chart.Line
+|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
+|> Chart.Show
 
-//Wrong Way!
-//obs 
-//|> Seq.map(fun r -> (r.Lat * -1.0), r.Lon)
-//|> Chart.Line
-//|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
-//|> Chart.Show
-//
+
+obs 
+|> Seq.map(fun r -> (r.Lat * -1.0), r.Lon)
+|> Chart.Line
+|> Chart.WithYAxis(Min= -78.676, Max= -78.675)
+|> Chart.Show
 
 obs 
 |> Seq.map(fun r -> (r.Lat * -1.0), r.Lon)
@@ -66,7 +62,6 @@ obs2
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.length)
 |> Seq.iter(fun (ln,lgth) -> printfn "%i:%i" ln lgth)
-
 
 //Need Start Line - use lat diff
 //Note inverse of Lat
@@ -104,6 +99,15 @@ racingObs
 |> Seq.map(fun (ln,obs) -> ln,obs |> Seq.averageBy(fun ob -> ob.Speed))
 |> Seq.iter(fun (ln,s) -> printfn "%i:%f" ln s)
 
+racingObs
+|> Seq.filter(fun o -> o.LapNumber = 1)
+|> Seq.map(fun o -> o.Speed)
+|> Seq.iter(fun s -> printfn "%f" s)
+
+racingObs
+|> Seq.filter(fun o -> o.LapNumber = 4)
+|> Seq.map(fun o -> o.Speed)
+|> Seq.iter(fun s -> printfn "%f" s)
 
 //Check time = clock is every second so time diff is number of seconds
 let totalTimeForObservations (obs:Observation2 seq) =
@@ -111,8 +115,7 @@ let totalTimeForObservations (obs:Observation2 seq) =
     let lastValue = obs |> Seq.last |> fun o -> o.ReadingTime
     (lastValue - firstValue).TotalSeconds
     
-//Calc Spped?
-//Dang, counter is every whole second
+//Calc Speed
 racingObs
 |> Seq.groupBy(fun o -> o.LapNumber)
 |> Seq.map(fun (ln,obs) -> ln, totalTimeForObservations obs)
